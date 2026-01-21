@@ -23,7 +23,6 @@
             color: #333;
         }
 
-        /* --- Main Widget Container --- */
         .widget-container {
             max-width: 800px;
             margin: 0 auto;
@@ -55,10 +54,6 @@
             color: var(--accent-color);
             text-decoration: none;
             font-weight: bold;
-        }
-
-        .widget-description a:hover {
-            text-decoration: underline;
         }
 
         /* --- Form Elements --- */
@@ -97,11 +92,20 @@
         .btn-submit:hover {
             background-color: #1a252f;
         }
+        
+        .sample-link {
+            display: inline-block;
+            margin-top: 5px;
+            font-size: 0.85em;
+            color: var(--accent-color);
+            text-decoration: underline;
+            cursor: pointer;
+        }
 
-        /* --- Results Area (Store Task Views) --- */
+        /* --- Results Area --- */
         #output-area {
             margin-top: 30px;
-            display: none; /* Hidden until data is processed */
+            display: none;
         }
 
         .store-dashboard {
@@ -127,7 +131,22 @@
             text-transform: uppercase;
         }
 
-        /* --- Task Cards --- */
+        /* --- Grouping & Cards --- */
+        .group-section {
+            margin-bottom: 20px;
+        }
+        
+        .group-title {
+            font-size: 1em;
+            color: var(--primary-color);
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
         .task-list {
             display: grid;
             gap: 10px;
@@ -139,6 +158,11 @@
             border-left: 4px solid var(--accent-color);
             border-radius: 4px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
+        }
+        
+        .task-card:hover {
+            transform: translateX(2px);
         }
 
         .task-meta {
@@ -153,6 +177,17 @@
             font-weight: bold;
             font-size: 1.1em;
             margin-bottom: 5px;
+        }
+        
+        .task-title a {
+            color: #2c3e50;
+            text-decoration: none;
+            border-bottom: 1px dotted #2c3e50;
+        }
+        
+        .task-title a:hover {
+            color: var(--accent-color);
+            border-bottom: 1px solid var(--accent-color);
         }
 
         .task-desc {
@@ -169,9 +204,8 @@
     <div class="widget-header">
         <h2>Store Task Assignment Portal</h2>
         <div class="widget-description">
-            Use this widget to assign operational tasks to Books-a-Million locations. 
-            For task guidelines, please refer to the 
-            <a href="https://example.com/bam-guidelines" target="_blank">Operations Manual</a>.
+            Assign operational tasks to Books-a-Million locations. Reference the 
+            <a href="https://example.com/bam-guidelines" target="_blank">Operations Manual</a> for details.
         </div>
     </div>
 
@@ -191,9 +225,11 @@
 
         <div class="form-group">
             <label for="csvFile">Upload Task List (CSV)</label>
-            <div style="font-size: 0.8em; color: #666; margin-bottom: 5px;">
-                Format: Task Name, Due Date, Description
+            <div style="font-size: 0.8em; color: #666;">
+                Format: <strong>Group Name, Task Name, Due Date, Description, Link URL</strong>
             </div>
+            <a id="downloadSample" class="sample-link" href="#">Download Sample CSV</a>
+            <br><br>
             <input type="file" id="csvFile" accept=".csv" required>
         </div>
 
@@ -203,10 +239,6 @@
     <div id="output-area">
         <hr>
         <h3>Generated Store Widget Preview</h3>
-        <p style="font-size:0.9em; color:#666; margin-bottom:15px;">
-            The following tasks have been successfully processed and assigned to the selected location(s).
-        </p>
-
         <div id="store-widget-display" class="store-dashboard">
             </div>
     </div>
@@ -214,6 +246,20 @@
 </div>
 
 <script>
+    // --- 1. Setup Sample CSV Download ---
+    const sampleCSVContent = `Group Name,Task Name,Due Date,Description,Link URL
+Morning Shift,Open Registers,08:30 AM,Ensure all POS terminals are online.,https://example.com/pos-guide
+Morning Shift,Unlock Front Doors,09:00 AM,Check perimeter before unlocking.,https://example.com/safety
+Inventory,Process Returns,02:00 PM,Scan all RMA items into the system.,https://example.com/returns
+Inventory,Restock Bestsellers,04:00 PM,Fill the front display with NYT top 10.,https://example.com/planogram`;
+
+    const blob = new Blob([sampleCSVContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.getElementById("downloadSample");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "bam_task_template.csv");
+
+    // --- 2. Form Handling ---
     document.getElementById('taskForm').addEventListener('submit', function(e) {
         e.preventDefault();
 
@@ -226,79 +272,101 @@
             return;
         }
 
-        // Use FileReader to parse the CSV client-side
         const reader = new FileReader();
-
         reader.onload = function(e) {
             const text = e.target.result;
             const tasks = parseCSV(text);
             generateWidget(store, tasks);
         };
-
         reader.readAsText(file);
     });
 
-    // Simple CSV Parser (Assumes comma separated, no complex quotes)
+    // --- 3. Parse CSV (5 Columns) ---
     function parseCSV(csvText) {
         const lines = csvText.split('\n');
         const tasks = [];
 
-        // Skip header row (index 0) and start at 1
+        // Start at index 1 to skip headers
         for (let i = 1; i < lines.length; i++) {
             const line = lines[i].trim();
             if (line) {
-                // Split by comma (simulated)
+                // Regex to handle commas inside quotes would be better, 
+                // but for this prototype we assume simple commas.
                 const parts = line.split(',');
                 
-                // Safe access to array parts
-                const taskName = parts[0] ? parts[0].trim() : "Untitled Task";
-                const dueDate = parts[1] ? parts[1].trim() : "No Date";
-                const description = parts[2] ? parts[2].trim() : "No details provided.";
-
-                tasks.push({ taskName, dueDate, description });
+                tasks.push({
+                    group: parts[0] ? parts[0].trim() : "General",
+                    taskName: parts[1] ? parts[1].trim() : "Untitled Task",
+                    dueDate: parts[2] ? parts[2].trim() : "",
+                    description: parts[3] ? parts[3].trim() : "",
+                    url: parts[4] ? parts[4].trim() : "#"
+                });
             }
         }
         return tasks;
     }
 
-    // Function to render the simulated store widget
+    // --- 4. Generate Visuals (Grouped) ---
     function generateWidget(storeName, tasks) {
         const outputArea = document.getElementById('output-area');
         const container = document.getElementById('store-widget-display');
         
         outputArea.style.display = 'block';
-        container.innerHTML = ''; // Clear previous
+        container.innerHTML = ''; 
 
-        // Create Header for the Store View
+        // 1. Header
         const headerHTML = `
             <div class="store-header">
                 <strong>Current Tasks</strong>
                 <span class="store-badge">${storeName === 'all' ? 'All Stores' : storeName}</span>
             </div>
         `;
+        container.innerHTML += headerHTML;
 
-        // Create HTML for the task list
-        let tasksHTML = '<div class="task-list">';
-        
         if (tasks.length === 0) {
-            tasksHTML += '<div class="task-card">No tasks found in CSV.</div>';
-        } else {
-            tasks.forEach(task => {
-                tasksHTML += `
+            container.innerHTML += '<div class="task-card">No tasks found.</div>';
+            return;
+        }
+
+        // 2. Group Tasks by "Group Name"
+        const groupedTasks = tasks.reduce((acc, task) => {
+            (acc[task.group] = acc[task.group] || []).push(task);
+            return acc;
+        }, {});
+
+        // 3. Render Groups
+        for (const [groupName, groupTasks] of Object.entries(groupedTasks)) {
+            
+            // Create Section Header
+            let groupHTML = `
+                <div class="group-section">
+                    <div class="group-title">${groupName}</div>
+                    <div class="task-list">
+            `;
+
+            // Render tasks in this group
+            groupTasks.forEach(task => {
+                // Only create a link if the URL is not just "#" or empty
+                const hasLink = task.url && task.url.length > 1;
+                const titleHtml = hasLink 
+                    ? `<a href="${task.url}" target="_blank">${task.taskName}</a>` 
+                    : task.taskName;
+
+                groupHTML += `
                     <div class="task-card">
                         <div class="task-meta">
                             <span>Status: <span style="color:#e67e22">Pending</span></span>
                             <span>Due: ${task.dueDate}</span>
                         </div>
-                        <div class="task-title">${task.taskName}</div>
+                        <div class="task-title">${titleHtml}</div>
                         <div class="task-desc">${task.description}</div>
                     </div>
                 `;
             });
-        }
-        tasksHTML += '</div>';
 
-        container.innerHTML = headerHTML + tasksHTML;
+            groupHTML += `</div></div>`; // Close list and section
+            container.innerHTML += groupHTML;
+        }
     }
 </script>
 
