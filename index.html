@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BAM Task Management Widget</title>
+    <style>
+        /* --- General Styles --- */
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #e74c3c; /* Books-a-Million red tone */
+            --bg-color: #f4f6f8;
+            --card-bg: #ffffff;
+            --border-radius: 8px;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        /* --- Main Widget Container --- */
+        .widget-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        /* --- Header Section --- */
+        .widget-header {
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 15px;
+        }
+
+        .widget-header h2 {
+            margin: 0 0 10px 0;
+            color: var(--primary-color);
+        }
+
+        .widget-description {
+            font-size: 0.95em;
+            color: #666;
+            line-height: 1.5;
+        }
+
+        .widget-description a {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .widget-description a:hover {
+            text-decoration: underline;
+        }
+
+        /* --- Form Elements --- */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        select, input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 1em;
+        }
+
+        .btn-submit {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            width: 100%;
+            transition: background 0.3s;
+        }
+
+        .btn-submit:hover {
+            background-color: #1a252f;
+        }
+
+        /* --- Results Area (Store Task Views) --- */
+        #output-area {
+            margin-top: 30px;
+            display: none; /* Hidden until data is processed */
+        }
+
+        .store-dashboard {
+            border: 1px solid #ddd;
+            background: #fafafa;
+            border-radius: var(--border-radius);
+            padding: 15px;
+        }
+
+        .store-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .store-badge {
+            background: var(--accent-color);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            text-transform: uppercase;
+        }
+
+        /* --- Task Cards --- */
+        .task-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .task-card {
+            background: white;
+            padding: 15px;
+            border-left: 4px solid var(--accent-color);
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .task-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85em;
+            color: #888;
+            margin-bottom: 5px;
+        }
+
+        .task-title {
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .task-desc {
+            font-size: 0.9em;
+            color: #555;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="widget-container">
+    
+    <div class="widget-header">
+        <h2>Store Task Assignment Portal</h2>
+        <div class="widget-description">
+            Use this widget to assign operational tasks to Books-a-Million locations. 
+            For task guidelines, please refer to the 
+            <a href="https://example.com/bam-guidelines" target="_blank">Operations Manual</a>.
+        </div>
+    </div>
+
+    <form id="taskForm">
+        
+        <div class="form-group">
+            <label for="storeSelect">Select Target Store(s)</label>
+            <select id="storeSelect" required>
+                <option value="" disabled selected>-- Choose a location --</option>
+                <option value="all">All Locations</option>
+                <option value="BAM #102 - Birmingham">BAM #102 - Birmingham</option>
+                <option value="BAM #305 - Nashville">BAM #305 - Nashville</option>
+                <option value="BAM #412 - Orlando">BAM #412 - Orlando</option>
+                <option value="BAM #550 - Denver">BAM #550 - Denver</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label for="csvFile">Upload Task List (CSV)</label>
+            <div style="font-size: 0.8em; color: #666; margin-bottom: 5px;">
+                Format: Task Name, Due Date, Description
+            </div>
+            <input type="file" id="csvFile" accept=".csv" required>
+        </div>
+
+        <button type="submit" class="btn-submit">Process & Assign Tasks</button>
+    </form>
+
+    <div id="output-area">
+        <hr>
+        <h3>Generated Store Widget Preview</h3>
+        <p style="font-size:0.9em; color:#666; margin-bottom:15px;">
+            The following tasks have been successfully processed and assigned to the selected location(s).
+        </p>
+
+        <div id="store-widget-display" class="store-dashboard">
+            </div>
+    </div>
+
+</div>
+
+<script>
+    document.getElementById('taskForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const store = document.getElementById('storeSelect').value;
+        const fileInput = document.getElementById('csvFile');
+        const file = fileInput.files[0];
+
+        if (!file) {
+            alert("Please upload a CSV file.");
+            return;
+        }
+
+        // Use FileReader to parse the CSV client-side
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            const text = e.target.result;
+            const tasks = parseCSV(text);
+            generateWidget(store, tasks);
+        };
+
+        reader.readAsText(file);
+    });
+
+    // Simple CSV Parser (Assumes comma separated, no complex quotes)
+    function parseCSV(csvText) {
+        const lines = csvText.split('\n');
+        const tasks = [];
+
+        // Skip header row (index 0) and start at 1
+        for (let i = 1; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (line) {
+                // Split by comma (simulated)
+                const parts = line.split(',');
+                
+                // Safe access to array parts
+                const taskName = parts[0] ? parts[0].trim() : "Untitled Task";
+                const dueDate = parts[1] ? parts[1].trim() : "No Date";
+                const description = parts[2] ? parts[2].trim() : "No details provided.";
+
+                tasks.push({ taskName, dueDate, description });
+            }
+        }
+        return tasks;
+    }
+
+    // Function to render the simulated store widget
+    function generateWidget(storeName, tasks) {
+        const outputArea = document.getElementById('output-area');
+        const container = document.getElementById('store-widget-display');
+        
+        outputArea.style.display = 'block';
+        container.innerHTML = ''; // Clear previous
+
+        // Create Header for the Store View
+        const headerHTML = `
+            <div class="store-header">
+                <strong>Current Tasks</strong>
+                <span class="store-badge">${storeName === 'all' ? 'All Stores' : storeName}</span>
+            </div>
+        `;
+
+        // Create HTML for the task list
+        let tasksHTML = '<div class="task-list">';
+        
+        if (tasks.length === 0) {
+            tasksHTML += '<div class="task-card">No tasks found in CSV.</div>';
+        } else {
+            tasks.forEach(task => {
+                tasksHTML += `
+                    <div class="task-card">
+                        <div class="task-meta">
+                            <span>Status: <span style="color:#e67e22">Pending</span></span>
+                            <span>Due: ${task.dueDate}</span>
+                        </div>
+                        <div class="task-title">${task.taskName}</div>
+                        <div class="task-desc">${task.description}</div>
+                    </div>
+                `;
+            });
+        }
+        tasksHTML += '</div>';
+
+        container.innerHTML = headerHTML + tasksHTML;
+    }
+</script>
+
+</body>
+</html>
